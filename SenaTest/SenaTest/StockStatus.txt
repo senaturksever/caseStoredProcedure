@@ -1,0 +1,32 @@
+CREATE PROCEDURE [dbo].[StockStatus]
+    @Malkodu VARCHAR(30),
+    @BaslangicTarihi INT,
+    @BitisTarihi INT
+AS
+BEGIN
+    SELECT
+        ROW_NUMBER() OVER (ORDER BY STI.Tarih) AS SiraNo,
+        CASE
+            WHEN STI.IslemTur = 0 THEN 'Giriþ'
+            WHEN STI.IslemTur = 1 THEN 'Çýkýþ'
+            ELSE 'Bilinmiyor'
+        END AS IslemTur,
+        STI.EvrakNo,
+        CONVERT(VARCHAR(15), CAST(STI.Tarih - 2 AS datetime), 104) AS Tarih,
+        CASE
+            WHEN STI.IslemTur = 0 THEN STI.Miktar
+            ELSE 0
+        END AS GirisMiktar,
+        CASE
+            WHEN STI.IslemTur = 1 THEN STI.Miktar
+            ELSE 0
+        END AS CikisMiktar,
+        (
+            SELECT SUM(CASE WHEN STI.IslemTur = 0 THEN STI.Miktar ELSE -STI.Miktar END)
+            FROM STI
+            WHERE STI.MalKodu = @Malkodu AND STI.Tarih >= @BaslangicTarihi AND STI.Tarih <= @BitisTarihi
+        ) AS Stok
+    FROM STI
+    WHERE STI.MalKodu = @Malkodu AND STI.Tarih >= @BaslangicTarihi AND STI.Tarih <= @BitisTarihi
+    ORDER BY STI.Tarih;
+END
